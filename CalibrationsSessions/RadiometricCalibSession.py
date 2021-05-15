@@ -12,9 +12,9 @@ class RadiometricCalibSession(CalibrationSession, ABC):
         self.radio_calib = radio_calib
         if exposures == 0:
             # Dark Inside:
-            # self.exposures = [500, 750, 1000, 1500, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000, 22000]
+            #self.exposures = [500, 750, 1000, 1500, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000, 22000]
             self.exposures = [30, 60, 100, 200, 400, 600, 1000, 1500, 2000, 4000, 6000, 8000, 10000, 14000, 19000,
-                              24000, 31000, 39000, 49000, 60000]
+                             24000, 31000, 39000, 49000, 60000]
         else:
             self.exposures = exposures
 
