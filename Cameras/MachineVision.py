@@ -3,18 +3,20 @@ from Camera import Camera
 from abc import ABC
 import numpy as np
 import cv2
+import os, time, math
 from skimage import io
 from io import BytesIO
 from IPython.display import clear_output, Image, display, update_display
 import PIL
-# from PySpinCapture import PySpinCapture as psc
-
+from Cameras.liveDisplay import ptgCamStream, imgShow, patternDisplay
+from Cameras.PySpinCapture import PySpinCapture as psc
 
 class Basler(Camera, ABC):
 
     def __init__(self, exposure=0.01, white_balance=0, auto_focus=False, grayscale=True):
         #  TODO: pylon.FeaturePersistence.Save("test.txt", camera.GetNodeMap())
         # Setting and initializing the Basler camera
+
         self.cap = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
         self.cap.Open()
         if self.cap is None:
@@ -25,6 +27,14 @@ class Basler(Camera, ABC):
         # Init base class
         super().__init__(exposure, white_balance, auto_focus, fps, resolution, grayscale)
         self.hdr_exposures = None
+
+    def setDir(self, directory, sessionName):
+        self.directory = directory
+        self.sessionName = sessionName
+        self.sessionDir = os.path.join(self.directory, self.sessionName)
+        print(self.sessionDir)
+        if not os.path.exists(self.sessionDir):
+            os.makedirs(self.sessionDir)
 
     def getAutoExposure(self):
         # Returns if auto exposure is enabled
@@ -221,15 +231,29 @@ except ImportError:
     PySpinCapture = None
     
 
+DISPLAY_HEIGHT = 1080
+DISPLAY_WIDTH = 1920
+NUM_PATTERN = 7
+DEFLECTOMETRY_FREQ = 0.9
+
 class Flir(Camera, ABC):
 
     def __init__(self, exposure=0.01, white_balance=1, auto_focus=False, grayscale=False):
+        self.sessionDir = None
 
         self._isMonochrome = True
 
         self._is16bits = True
 
+        # self.NumPatterns = NUM_PATTERN
+        self.displayWidth = DISPLAY_WIDTH
+        self.displayHeight = DISPLAY_HEIGHT
+
+        self.setDefPattern()
+
         self.Cam = psc(0, self._isMonochrome, self._is16bits)
+        self.height = self.Cam.height
+        self.width = self.Cam.width
 
         fps = self.getFPS()
 
@@ -238,27 +262,34 @@ class Flir(Camera, ABC):
         super().__init__(exposure, white_balance, auto_focus, fps, resolution, grayscale)
 
         self.hdr_exposures = None
+    
 
-
-
-    def getImage(self, name='test', saveImage=True, saveNumpy=True, calibration=False, timeout=5000):
+    def getImage(self, name='test', saveImage=True, saveNumpy=True, calibration=False, timeout=5000, calibrationName = None):
 
         try:
 
             # Take and return current camera frame
 
             success, img = self.Cam.grabFrame()
+            #print(img.shape)
 
             # Save if desired
 
             if saveImage:
 
                 if calibration:
+                    #filename = 'CalibrationImages/' + name + '.raw'
+                    if calibrationName is None:
 
-                    filenamePNG = 'CalibrationImages/' + name + '.PNG'
+                        filenamePNG = 'CalibrationImages/' + name + '.PNG'
 
-                    cv2.imwrite(filenamePNG, cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+                        cv2.imwrite(filenamePNG, cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+                    
+                    else:
+                        filenamePNG = os.path.join('CalibrationImages/' + calibrationName,  name + '.PNG')
 
+                        cv2.imwrite(filenamePNG, cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+                    
                 else:
 
                     filename = 'CapturedImages/' + name + '.PNG'
@@ -293,8 +324,6 @@ class Flir(Camera, ABC):
 
         
 
-
-
     def getExposure(self):
 
         return self.Cam.getExposure()
@@ -328,7 +357,131 @@ class Flir(Camera, ABC):
     def setGain(self, gain):
 
         self.Cam.setGain(gain)
+    
+    def captureImage(self, fname):
+        if fname:
+            path = 'CapturedImages/' + fname + '.png'
+            #path = os.path.join(self.sessionDir, fname + ".png")
+            flag, img = self.Cam.grabFrame()
+            if not flag:
+                print("[ERROR]: Didn't get the image!!!")
+            else:
+                cv2.imwrite(path, img, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+        else:
+            flag, img = self.Cam.grabFrame()
+            print("capture!!!!")
+            if not flag:
+                print("[ERROR]: Didn't get the image!!!")
+                return None
+            else:
+                return img
 
+
+    def sinePattern(self, x, y, nu_x, nu_y):
+        # Phase Shifts (first entry is white light modulation)
+        theta = [0, np.pi / 2, np.pi, 3 / 2 * np.pi]
+        [X, Y, Theta] = np.meshgrid(x, y, theta)
+
+        # Calculate Phase Shifts
+        phase = (nu_x * X + nu_y * Y) + Theta
+        # Simple formula to create fringes between 0 and 1:
+        pattern = (np.sin(phase) + 1) / 2
+
+        return pattern
+    
+    def setPatternScale(self, mode=1):
+        patternSize = min(self.displayHeight, self.displayWidth)
+        boarderSize = math.floor((max(self.displayHeight, self.displayWidth) - patternSize)/2)
+
+        if mode == 0:
+            # Img sequences[7]: {gh, ch, gv, cv, g2h, g2v, black}
+            self.NumPatterns = 7
+        elif mode == 1:
+            # Img sequences[8]: {gh, ch, gv, cv, g2h, g2v, black, full}
+            self.NumPatterns = 8
+        elif mode == 2:
+            # Img sequences[9]: {h1, h2, h3, h4, v1, v2, v3, v4, black}
+            self.NumPatterns = 9
+        elif mode == 3:
+            # Img sequences[9]: {h1, h2, h3, h4, v1, v2, v3, v4, black, full}
+            self.NumPatterns = 10
+        else:
+            self.NumPatterns = 8
+            print("[WARNING]: Unrecognizable mode. Using Gradient Pattern!!")
+        self.patterns = np.zeros((self.displayHeight, self.displayWidth, self.NumPatterns), dtype=np.float32)
+
+        return patternSize, boarderSize
+
+
+    def setDefPattern(self):
+        #patternSize, boarderSize = self.setPatternScale(2)
+        patternSize, boarderSize = self.setPatternScale(2)
+
+        patternSize = max(self.displayHeight, self.displayWidth)
+        #patternSize = min(self.displayHeight, self.displayWidth)
+        
+        # Create spatial coordinates
+        x = np.linspace(1, self.displayWidth, self.displayWidth)
+        y = np.linspace(1, self.displayHeight, self.displayHeight)
+
+        # Frequencies in x and y direction.
+        nu_x =  DEFLECTOMETRY_FREQ * 2 * np.pi / patternSize
+        nu_y = DEFLECTOMETRY_FREQ * 2 * np.pi / patternSize
+
+        self.patterns[..., 0:4] = self.sinePattern(x, y, nu_x, 0)
+        self.patterns[..., 4:8] = self.sinePattern(x, y, 0, nu_y)
+        # self.patterns[..., 8] = 127 * np.ones((DISPLAY_HEIGHT,DISPLAY_WIDTH))
+
+    def captureSeqImages(self):
+        window_name = 'projector'
+        cv2.namedWindow(window_name, cv2.WND_PROP_FULLSCREEN)
+
+        # If projector is placed right to main screen (see windows properties in your operating system)
+        # if the pattern is displayed at the wrong monitor you need to play around with the coordinates here until the image is displayed at the right screen
+        cv2.moveWindow(window_name, self.displayWidth, 0)
+
+        cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+        cv2.imshow(window_name, self.patterns[..., 0].astype(np.float32))
+
+        if self._isMonochrome:
+            if self._is16bits:
+                imgs = np.zeros((self.NumPatterns, self.height, self.width), dtype=np.uint16)
+            else:
+                imgs = np.zeros((self.NumPatterns, self.height, self.width), dtype=np.uint8)
+        else:
+            if self._is16bits:
+                imgs = np.zeros((self.NumPatterns, self.height, self.width, 3), dtype=np.uint16)
+            else:
+                imgs = np.zeros((self.NumPatterns, self.height, self.width, 3), dtype=np.uint8)
+
+        cv2.waitKey(200)
+        # Loop through 
+        for i in range(self.NumPatterns):
+            if not i==0:
+                if i == self.NumPatterns - 1:
+                    cur_img = 127 * np.ones((DISPLAY_HEIGHT,DISPLAY_WIDTH))
+                    cv2.imshow(window_name, cur_img.astype(np.uint8))
+                else:
+                    cur_img = self.patterns[... ,i]
+                    cv2.imshow(window_name, cur_img.astype(np.float32))
+
+            cv2.waitKey(400)  # ms # delay time
+            # wait for 1000 ms ( syncrhonize this with your aquisition time)
+            imgs[i, ...] = self.captureImage(fname=None)
+
+            cv2.waitKey(400) # ms # delay time
+
+        # Don't forgot to close all windows at the end of aquisition
+        cv2.destroyAllWindows()
+
+
+        for i in range(self.NumPatterns):
+            fname = 'CapturedImages/sequenceImages/' + str(i) + ".png"
+            # fname = fpath + '\\' + str(i) + '.png'
+            if self._isMonochrome:
+                cv2.imwrite(fname, imgs[i, ...], [cv2.IMWRITE_PNG_COMPRESSION, 0])  # RGB to BGR
+            else:
+                cv2.imwrite(fname, imgs[i, ...][..., ::-1], [cv2.IMWRITE_PNG_COMPRESSION, 0]) #RGB to BGR
 
 
     def getResolution(self):
@@ -368,6 +521,32 @@ class Flir(Camera, ABC):
             io.imsave('CapturedImages/' + name + '.PNG', png_frame.astype(np.uint8))
 
 
+    def liveView(self):
+
+        print("[INFO] starting live view thread...")
+        viewGrabber = ptgCamStream(self.Cam).start()
+        viewShower = imgShow(frame=viewGrabber.read()).start()
+
+        time.sleep(0.1)
+        while viewGrabber.running():
+            if viewGrabber.stopped or viewShower.stopped:
+                viewShower.stop()
+                viewGrabber.stop()
+                break
+
+            frame = viewGrabber.read()
+            viewShower.frame = frame
+
+        viewGrabber.stop()
+        viewShower.stop()
+        viewGrabber.__exit__()
+        viewShower.__exit__()
+
+        viewGrabber.thread.join()
+        viewShower.thread.join()
+        del viewGrabber
+        del viewShower
+        cv2.destroyWindow("Live View")
 
     def viewCameraStream(self):
 
@@ -471,6 +650,25 @@ class Flir(Camera, ABC):
 
             self.quit_and_open()
 
+    def displayCalib(self):
+        # TODO: Need to use threading so that the GUI won't stuck!
+        pattern = cv2.imread("Projections/8_24_checker.png", cv2.IMREAD_GRAYSCALE)
+        window_name = 'projector'
+        cv2.namedWindow(window_name, cv2.WND_PROP_FULLSCREEN)
+        #
+        # # If projector is placed right to main screen (see windows properties in your operating system)
+        # # if the pattern is displayed at the wrong monitor you need to play around with the coordinates here until the image is displayed at the right screen
+        cv2.moveWindow(window_name, self.displayWidth, 0)
+        #
+        cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        cv2.imshow(window_name, pattern.astype(np.float32))
+        k = cv2.waitKey(0)
+        if k == 27: # wait for ESC key to exit
+            cv2.destroyAllWindows()
+         
+        
+
+        # patternShower = patternDisplay(displayHeight=self.displayHeight, displayWidth=self.displayWidth, pattern=pattern).start()
 
 
     def quit_and_close(self):
