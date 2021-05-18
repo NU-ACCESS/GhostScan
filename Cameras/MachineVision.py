@@ -662,6 +662,13 @@ class Flir(Camera, ABC):
         #
         cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.imshow(window_name, pattern.astype(np.float32))
+        #
+        # capture checkerboard
+        img = self.captureImage(fname=None)
+        fname = 'CalibrationImages/Geometric/' + 'test' + ".png"
+        cv2.imwrite(fname, img, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+        #
+        # exit
         k = cv2.waitKey(0)
         if k == 27: # wait for ESC key to exit
             cv2.destroyAllWindows()
