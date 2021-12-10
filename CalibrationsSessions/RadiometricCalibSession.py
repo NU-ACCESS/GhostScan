@@ -1,20 +1,26 @@
 from abc import ABC
 from CalibrationSession import CalibrationSession
 from Calibrations import RadiometricCalibration
-
+import numpy as np
 
 class RadiometricCalibSession(CalibrationSession, ABC):
-    def __init__(self, camera, radio_calib, path='CalibrationImages/Radiometric', exposures=0):
+    def __init__(self, camera, radio_calib, path='CalibrationImages/Radiometric', exposures=0, mean_value = 3500000):
         # Set camera, destination path
         self.camera = camera
         self.path = path
         self.g = None
         self.radio_calib = radio_calib
         if exposures == 0:
+            mean_value = mean_value 
+            std_value = mean_value * 50
+            ndis_no = np.random.normal( mean_value, std_value, size = 2000)
+            ndis_no = ndis_no[ (ndis_no >= 5000) & (ndis_no < 30000000)]
+            ndis_no = (np.ceil(ndis_no)).astype(int)
+            ndis_no = np.sort(ndis_no)
+            self.exposures = ndis_no
             # Dark Inside:
-            #self.exposures = [500, 750, 1000, 1500, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000, 22000]
-            self.exposures = [30, 60, 100, 200, 400, 600, 1000, 1500, 2000, 4000, 6000, 8000, 10000, 14000, 19000,
-                             24000, 31000, 39000, 49000, 60000]
+            # self.exposures = [5000, 7500, 10000, 15000, 20000, 40000, 60000, 80000, 100000, 120000, 140000, 160000, 180000, 200000, 1640000]
+            # self.exposures = [5000,60000, 7000, 8000, 9000, 10000, 12000, 14000, 15000, 16000, 18000, 20000, 22000, 25000, 27000, 30000, 32000, 35000, 37000, 40000, 43000, 45000, 47000, 50000, 52000, 55000, 57000, 60000, 62000, 65000, 67000, 70000, 75000, 80000, 85000, 90000, 95000, 100000, 110000, 120000, 130000, 140000, 150000, 160000, 170000, 180000, 190000, 200000, 230000, 250000, 280000, 320000, 330000, 350000,370000, 400000, 450000, 500000, 550000, 580000,600000, 640000, 700000, 800000, 900000,1000000, 1280000,1500000, 1700000, 1800000, 2000000, 2560000, 3000000, 4000000, 5120000]
         else:
             self.exposures = exposures
 
@@ -41,9 +47,4 @@ class RadiometricCalibSession(CalibrationSession, ABC):
         imgs, g = self.radio_calib.calibrate_image(exposure, path)
         return imgs, g
 
-
-# self.exposures = [19, 54, 100, 298, 497, 803, 1599, 3198, 6402, 12798, 16003, 18007, 24005, 39993, 79986,
-#                  159971, 300114]
-# self.exposures = [19, 38, 76, 152, 304, 608, 1216, 2432, 4864, 9728, 19456, 38912, 77824, 155648, 311296,
-#    622592, 1245184, 2490368, 4980736]
 

@@ -43,7 +43,7 @@ class RadiometricCalibDisplaySession(CalibrationSession, ABC):
         plt.title("Display to Relative Radiance Curve")
         plt.xlabel('Display pixel value')
         plt.ylabel('Relative Radiance')
-        plt.plot(pixelValues, DisplayToRadianceData, 'k')
+        plt.plot(list(range(0, 256)), DisplayToRadianceData, 'k')
         # plt.show()
         fig.savefig(imgSave + '/Display to Relative Radiance Curve' + '.png')
         # fig.savefig('Display to Relative Radiance Curve.png')
@@ -64,31 +64,24 @@ class RadiometricCalibDisplaySession(CalibrationSession, ABC):
 
 
     def calculateReflectivity(self):
-        imgPath = 'CapturedImages/sequenceImages/8.png'
+        imgPath = 'CapturedImages/sequenceImages/undistort/8.png'
         arr = self.calUpValue(imgPath)
 
-        # img = cv2.imread(imgPath, cv2.IMREAD_GRAYSCALE)
-        # img = np.array(img, dtype='uint8')
-        # row, col = img.shape[0], img.shape[1]
+
 
         DisplayToRadianceData = self.calculateDisplayCalibration()
-        DisplayToRadianceValue = DisplayToRadianceData[255]
-        
-        # arr = []
-        # for i in range(row):
-        #     cols = []
-        #     for j in range(col):
-        #         val = math.exp(self.g[img[i][j]] - math.log(self.exposure)) / DisplayToRadianceValue
-        #         cols.append(val)
-        #     arr.append(cols)
-        # arr = np.array(arr)
-        # print(arr)
+    
+        DisplayToRadianceValue = DisplayToRadianceData[127]
+  
         
         arr = [[j/DisplayToRadianceValue for j in i] for i in arr]
         imgSave = 'CapturedImages/sequenceImages/undistortRadioCalib/radioCalibResults'
         fig = plt.figure()
         plt.imshow(arr, cmap='viridis')
+
+        # v = np.linspace(0, 1.0, 15, endpoint=True)
         plt.colorbar()
+        plt.clim(0, 1)
         # plt.show()
         fig.savefig(imgSave + '/Reflectivity Map' + '.png')
         # plt.savefig('Reflectivity Map.png')
@@ -98,17 +91,18 @@ class RadiometricCalibDisplaySession(CalibrationSession, ABC):
 
     def radiometricCalibUndistortImages(self):
         Reflectivity = self.calculateReflectivity()
+        print("get reflectivity")
         imgSeqPath = 'CapturedImages/sequenceImages/'
         # sequenceNum = 8
         for i in range(self.sequenceNum):
-            upValue = self.calUpValue(imgSeqPath + str(i) + '.png')
-            # print(upValue)
+            upValue = self.calUpValue(imgSeqPath + "undistort/" + str(i) + '.png')
+          
             radiance = np.divide(upValue, Reflectivity)
-            # print(radiance)
-            # print(radiance.shape[0], radiance.shape[1])
+        
             correctedImage = self.imageCorrection(radiance)
-            # print(correctedImage)
+           
             cv2.imwrite(imgSeqPath + 'undistortRadioCalib/' + str(i) + '.png', correctedImage)
+            print("image " + str(i) + " is undistorted")
 
     def imageCorrection(self, radiance):
         DisplayToRadianceData = self.calculateDisplayCalibration()
@@ -160,37 +154,22 @@ class RadiometricCalibDisplaySession(CalibrationSession, ABC):
         cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
         cv2.imshow(window_name, self.patterns[..., 0].astype(np.uint8))
 
-        # test for projector
-        #imgs = np.zeros((self.NumPatterns, self.camera.height, self.camera.width), dtype=np.uint16)
-        # for i in range(self.NumPatterns):
-        #     print(i)
-        #     if not i==0:
-        #         cur_img = (i * np.ones((DISPLAY_HEIGHT,DISPLAY_WIDTH))).astype(np.uint8)
-        #         print(cur_img)
-        #         cv2.imshow(window_name, cur_img)
-        #         #cv2.imshow(window_name, cur_img.astype(np.float32))
-        #     else:
-        #         cur_img = np.zeros((DISPLAY_HEIGHT,DISPLAY_WIDTH))
-        #         cv2.imshow(window_name, cur_img.astype(np.uint8))
-        #     cv2.waitKey(40)
+       
         cv2.waitKey(20)
         # Loop through 
         for i in range(self.NumPatterns):
-            # if not i==0:
-            #     cur_img = self.patterns[... ,i]
-            #     cv2.imshow(window_name, cur_img.astype(np.float32))
+            
             cv2.waitKey(40)
 
             cur_img = self.patterns[... ,i]
-            #print(cur_img.shape)
-            # print(self.patterns[... ,i])
+            
             cv2.imshow(window_name, cur_img.astype(np.uint8))
-            cv2.waitKey(400)  # delay time
+            cv2.waitKey(20)  # delay time
             # wait for 1000 ms ( syncrhonize this with your aquisition time)
-            # imgs[i, ...] = self.camera.captureImage(fname=None)
+       
             self.camera.getImage(name = 'DisplayRadiometric/'+str(i), calibration=True)
 
-            cv2.waitKey(40) # ms # delay time
+            cv2.waitKey(20) # ms # delay time
 
         # Don't forgot to close all windows at the end of aquisition
         cv2.destroyAllWindows()
@@ -200,9 +179,7 @@ class RadiometricCalibDisplaySession(CalibrationSession, ABC):
         files = []
         # Load images
         for file in os.listdir(self.path):
-            # Only use .raw files(Balser)
-            #if file.endswith(".raw") or file.endswith(".Raw") or file.endswith(".RAW"):
-            #    files.append(file)
+           
             if file.endswith(".png") or file.endswith(".Png") or file.endswith(".PNG"):
                 files.append(file)
         # Sort files depending on their exposure time from lowest to highest        
@@ -210,8 +187,7 @@ class RadiometricCalibDisplaySession(CalibrationSession, ABC):
         # We used exposure time as filenames
 
         for filename in files:
-            #image = np.fromfile(self.path + '/' + filename, dtype=np.uint8)
-            # image = cv2.imread(self.path + '/' + filename, cv2.IMREAD_UNCHANGED);
+           
             image = cv2.imread(self.path + '/' + filename, 0)
             average = image.mean(axis=0).mean(axis=0) 
             pixelValues.append(average)
@@ -230,12 +206,6 @@ class RadiometricCalibDisplaySession(CalibrationSession, ABC):
         return pixelValues
 
 
-    # def calibrate_HDR(self, smoothness=1000):
-    #     # Call radiometric calibration
-    #     # This computes and returns the camera response function and calculates a HDR image saved in path as PNG and .np
-    #     self.g, le = self.radio_calib.get_camera_response(smoothness)
-    #     self.radio_calib.plotCurve("Camera response")
-    #     return self.g, le
 
     def load_calibration(self):
         self.radio_calib.load_calibration_data()
