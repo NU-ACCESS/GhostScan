@@ -377,7 +377,11 @@ class Flir(Camera, ABC):
                 return img
 
 
-    def sinePattern(self, x, y, nu_x, nu_y):
+    def sinePattern(self, x, y, nu_x, nu_y, Max=255, Min=30):
+        if (Max > 255 or Max < 0):
+            print("Max Value is beyond threshold")
+        if (Min > 255 or Min < 0 or Min > Max):
+            print("Min Value is beyond threshold")
         # Phase Shifts (first entry is white light modulation)
         theta = [0, np.pi / 2, np.pi, 3 / 2 * np.pi]
         [X, Y, Theta] = np.meshgrid(x, y, theta)
@@ -385,7 +389,13 @@ class Flir(Camera, ABC):
         # Calculate Phase Shifts
         phase = (nu_x * X + nu_y * Y) + Theta
         # Simple formula to create fringes between 0 and 1:
-        pattern = (np.sin(phase) + 1) / 2
+        # pattern = (np.sin(phase) + 1) / 2
+        # Simple formula to create fringes between 0.12 and 1:
+        Max = Max/255
+        Min = Min/255
+        a = (Max - Min) / 2
+        b = Min + (Max - Min) / 2
+        pattern = a * np.sin(phase) + b
 
         return pattern
     
@@ -454,7 +464,8 @@ class Flir(Camera, ABC):
             else:
                 imgs = np.zeros((self.NumPatterns, self.height, self.width, 3), dtype=np.uint8)
 
-        cv2.waitKey(200)
+        cv2.waitKey(40)
+
         # Loop through 
         for i in range(self.NumPatterns):
             if not i==0:
@@ -464,12 +475,14 @@ class Flir(Camera, ABC):
                 else:
                     cur_img = self.patterns[... ,i]
                     cv2.imshow(window_name, cur_img.astype(np.float32))
+                    # print(np.min(cur_img)) # get min value of sin pattern
 
-            cv2.waitKey(400)  # ms # delay time
+
+            cv2.waitKey(40)  # ms # delay time
             # wait for 1000 ms ( syncrhonize this with your aquisition time)
             imgs[i, ...] = self.captureImage(fname=None)
 
-            cv2.waitKey(400) # ms # delay time
+            cv2.waitKey(10) # ms # delay time
 
         # Don't forgot to close all windows at the end of aquisition
         cv2.destroyAllWindows()
@@ -652,7 +665,7 @@ class Flir(Camera, ABC):
 
     def displayCalib(self):
         # TODO: Need to use threading so that the GUI won't stuck!
-        pattern = cv2.imread("Projections/8_24_checker.png", cv2.IMREAD_GRAYSCALE)
+        pattern = cv2.imread("Projections/10_14_checker.png", cv2.IMREAD_GRAYSCALE)
         window_name = 'projector'
         cv2.namedWindow(window_name, cv2.WND_PROP_FULLSCREEN)
         #
