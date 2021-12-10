@@ -11,7 +11,7 @@ import Reconstructions.generatephase as gp
 
 
 def normalInWorld(cam_mirror_intersect_mat, normal_map, half_length, half_height):
-    SCALE_FACTOR = 2000
+    SCALE_FACTOR = 1000
 
     intersect_point = cam_mirror_intersect_mat
     #varMask = np.load(os.path.join(rootImgPath, "results/mask.npz"))

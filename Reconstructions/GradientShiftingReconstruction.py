@@ -163,9 +163,9 @@ class GradientShiftingReconstruction(ImageProcessing, ABC):
             frame_r_n = color.rgb2gray(self.frame_reflectivity).astype(np.float64) + 1e-9
         # Grayscale
         else:
-            frames_x_n = self.frames_x.astype(np.float64)**gamma
-            frames_y_n = self.frames_y.astype(np.float64)**gamma
-            frame_r_n = self.frame_reflectivity.astype(np.float64)**gamma
+            frames_x_n = 255*(self.frames_x.astype(np.float64)/255)**gamma
+            frames_y_n = 255*(self.frames_y.astype(np.float64)/255)**gamma
+            frame_r_n = 255*(self.frame_reflectivity.astype(np.float64)/255)**gamma
 
         # Get overall maximum value
         max_norm = max(np.max(frames_x_n), np.max(frames_y_n))
@@ -329,6 +329,7 @@ class GradientShiftingReconstruction(ImageProcessing, ABC):
         p_g_cost = v*p_green_fft - u*q_green_fft
         p_cost = np.dstack((p_r_cost, p_g_cost))
         # Find gradient that minimizes constraint
+        print("Moin")
         ids = np.argmin(p_cost, axis=2)
         n_ids = np.where((ids == 0) | (ids == 1), ids ^ 1, ids)
         opt_fft_p = n_ids * p_red + ids * p_green

@@ -15,12 +15,15 @@ from Reconstructions.normalInWorld import normalInWorld, normalCompare, calAngFe
 
 def normal2RGB(normalImage, normal_mat_origin, normalmap_world):
     # Now let's visualize the normal map!
+    # plt.imshow(normalmap_world)
     resultFolder = os.path.join(os.path.join(os.path.join(os.getcwd(), 'CapturedImages'), 'sequenceImages'), 'results')
     fig = plt.figure(figsize=(15,10))
     plt.imshow(normalImage)
+    # plt.colorbar()
     plt.title("Normal Map Encoded in RGB Image")
     fig.savefig(resultFolder + '/Normal Map Encoded in RGB Image' + '.png')
     plt.show()
+
     # visualize normal map in camera perspective
     norm = matplotlib.colors.Normalize(vmin= -1, vmax = 1)
     norm2 = matplotlib.colors.Normalize(vmin= -1, vmax = 1)
@@ -28,20 +31,24 @@ def normal2RGB(normalImage, normal_mat_origin, normalmap_world):
     plt.imshow(normal_mat_origin[:,:,0], norm= norm)
     plt.title("X Component")
     plt.colorbar()
+    # plt.clim(-0.2, 0) 
     fig.savefig(resultFolder + '/X Component' + '.png')
     plt.show()
+
     fig = plt.figure(figsize=(15,10))
     plt.imshow(normal_mat_origin[:,:,1], norm= norm)
     plt.title("Y Component")
     plt.colorbar()
+    # plt.clim(-0.2, 0.2) 
     fig.savefig(resultFolder + '/Y Component' + '.png')
     plt.show()
     fig = plt.figure(figsize=(15,10))
     plt.imshow(normal_mat_origin[:,:,2], norm= norm2)
     plt.title("Z Component")
     plt.colorbar()
-    fig.savefig(resultFolder + '/Z Component' + '.png')
+    fig.savefig(resultFolder + '/Z Comonent' + '.png')
     plt.show()
+
     # visualize normal map in world perspective
     fig = plt.figure(figsize=(25,10))
     for i in range(3):
@@ -64,5 +71,4 @@ def normal2RGB(normalImage, normal_mat_origin, normalmap_world):
     plt.show()
     fig.savefig(resultFolder + '/normal2RGB' + '.png')
         
-
         
