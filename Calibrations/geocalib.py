@@ -9,7 +9,7 @@ from Calibrations.Camera2ScreenCalib import calib
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-def geoCalib(imgFile, imgUndistortFile, half_length, half_height, cameraMatrix, disCoeffs, ret, displayScaleFactor):
+def geoCalib(imgFile, imgUndistortFile, half_length, half_height, marker_size, cameraMatrix, disCoeffs, ret, displayScaleFactor):
 
     # calculate cam2screen
     rc2s, tc2s = calib(imgFile, cameraMatrix, disCoeffs, half_length, half_height, displayScaleFactor)
@@ -39,16 +39,24 @@ def geoCalib(imgFile, imgUndistortFile, half_length, half_height, cameraMatrix, 
     [markerCorners,markerIDs, rejectedImgPoints] = cv2.aruco.detectMarkers(gray, dictionary, cameraMatrix=cameraMatrix, distCoeff=disCoeffs)
 
 
+    board_corner = np.array([np.array([[-half_length, -half_height, 0], [-half_length + marker_size, -half_height, 0], [-half_length + marker_size, -half_height + marker_size, 0], [-half_length, -half_height + marker_size, 0]]),
+                    np.array([[half_length - marker_size, -half_height, 0], [half_length, -half_height, 0], [half_length, -half_height + marker_size, 0], [half_length - marker_size, -half_height + marker_size, 0]]),
+                    np.array([[half_length - marker_size, half_height - marker_size, 0], [half_length, half_height - marker_size, 0], [half_length, half_height, 0], [half_length - marker_size, half_height, 0]]),
+                    np.array([[-half_length, half_height - marker_size, 0], [-half_length + marker_size, half_height - marker_size, 0], [-half_length + marker_size, half_height, 0], [-half_length, half_height, 0]]),
+                    np.array([[-marker_size/2, -half_height, 0], [marker_size/2, -half_height, 0], [marker_size/2, -half_height + marker_size, 0], [-marker_size/2, -half_height + marker_size, 0]]),
+                    np.array([[-half_length, -marker_size/2, 0], [-half_length + marker_size, -marker_size/2, 0], [-half_length + marker_size, marker_size/2, 0], [-half_length, marker_size/2, 0]]),
+                    np.array([[half_length - marker_size, -marker_size/2, 0], [half_length, -marker_size/2, 0], [half_length, marker_size/2, 0], [half_length - marker_size, marker_size/2, 0]]),
+                    np.array([[-marker_size/2, half_height - marker_size, 0], [marker_size/2, half_height - marker_size, 0], [marker_size/2, half_height, 0], [-marker_size/2, half_height, 0]])], dtype=np.float32)
 
-    board_corner = np.array([np.array([[-half_length, -half_height, 0], [-half_length + 0.04, -half_height, 0], [-half_length + 0.04, -half_height + 0.04, 0], [-half_length, -half_height + 0.04, 0]]),
-                    np.array([[half_length - 0.04, -half_height, 0], [half_length, -half_height, 0], [half_length, -half_height + 0.04, 0], [half_length - 0.04, -half_height + 0.04, 0]]),
-                    np.array([[half_length - 0.04, half_height - 0.04, 0], [half_length, half_height - 0.04, 0], [half_length, half_height, 0], [half_length - 0.04, half_height, 0]]),
-                    np.array([[-half_length, half_height - 0.04, 0], [-half_length + 0.04, half_height - 0.04, 0], [-half_length + 0.04, half_height, 0], [-half_length, half_height, 0]]),
-                    np.array([[-0.02, -half_height, 0], [0.02, -half_height, 0], [0.02, -half_height + 0.04, 0], [-0.02, -half_height + 0.04, 0]]),
-                    np.array([[-half_length, -0.02, 0], [-half_length + 0.04, -0.02, 0], [-half_length + 0.04, 0.02, 0], [-half_length, 0.02, 0]]),
-                    np.array([[half_length - 0.04, -0.02, 0], [half_length, -0.02, 0], [half_length, 0.02, 0], [half_length - 0.04, 0.02, 0]]),
-                    np.array([[-0.02, half_height - 0.04, 0], [0.02, half_height - 0.04, 0], [0.02, half_height, 0], [-0.02, half_height, 0]])], dtype=np.float32)
-
+    # board_corner = np.array([np.array([[-half_length, -half_height, 0], [-half_length + 0.04, -half_height, 0], [-half_length + 0.04, -half_height + 0.04, 0], [-half_length, -half_height + 0.04, 0]]),
+    #                 np.array([[half_length - 0.04, -half_height, 0], [half_length, -half_height, 0], [half_length, -half_height + 0.04, 0], [half_length - 0.04, -half_height + 0.04, 0]]),
+    #                 np.array([[half_length - 0.04, half_height - 0.04, 0], [half_length, half_height - 0.04, 0], [half_length, half_height, 0], [half_length - 0.04, half_height, 0]]),
+    #                 np.array([[-half_length, half_height - 0.04, 0], [-half_length + 0.04, half_height - 0.04, 0], [-half_length + 0.04, half_height, 0], [-half_length, half_height, 0]]),
+    #                 np.array([[-0.02, -half_height, 0], [0.02, -half_height, 0], [0.02, -half_height + 0.04, 0], [-0.02, -half_height + 0.04, 0]]),
+    #                 np.array([[-half_length, -0.02, 0], [-half_length + 0.04, -0.02, 0], [-half_length + 0.04, 0.02, 0], [-half_length, 0.02, 0]]),
+    #                 np.array([[half_length - 0.04, -0.02, 0], [half_length, -0.02, 0], [half_length, 0.02, 0], [half_length - 0.04, 0.02, 0]]),
+    #                 np.array([[-0.02, half_height - 0.04, 0], [0.02, half_height - 0.04, 0], [0.02, half_height, 0], [-0.02, half_height, 0]])], dtype=np.float32)
+    # board_id = np.array([[0], [6], [4], [2], [7], [1], [5]], dtype=np.int32)
     board_id = np.array([[0], [6], [4], [2], [7], [1], [5], [3]], dtype=np.int32)
     board = cv2.aruco.Board_create(board_corner, dictionary, board_id)
 
@@ -64,7 +72,7 @@ def geoCalib(imgFile, imgUndistortFile, half_length, half_height, cameraMatrix, 
 
 
     #cv2.aruco.drawPlanarBoard(board, img.shape)
-    rvecs,tvecs,_objpoints = cv2.aruco.estimatePoseSingleMarkers(markerCorners, 0.04, cameraMatrix, disCoeffs, )
+    rvecs,tvecs,_objpoints = cv2.aruco.estimatePoseSingleMarkers(markerCorners, marker_size, cameraMatrix, disCoeffs, )
     r_mean = np.mean(rvecs,axis=0)
     t_mean = np.mean(tvecs,axis=0)
 
@@ -79,7 +87,7 @@ def geoCalib(imgFile, imgUndistortFile, half_length, half_height, cameraMatrix, 
     r_mirror_mat = cv2.Rodrigues(r_mirror,dst= r_mirror_mat,jacobian=None)
     r_mirror_mat = r_mirror_mat[0]
     #print("r mirror mat is ", r_mirror_mat)
-    img_axis = aruco.drawAxis(img, cameraMatrix, disCoeffs, r_mirror, t_mirror, 0.04)
+    img_axis = aruco.drawAxis(img, cameraMatrix, disCoeffs, r_mirror, t_mirror, marker_size)
     width = 960
     height = int(img.shape[0]*960/img.shape[1])
     smallimg = cv2.resize(img,(width,height))

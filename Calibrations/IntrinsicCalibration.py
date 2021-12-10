@@ -3,7 +3,7 @@ import glob
 import os
 import numpy as np
 import cv2
-from cv2 import aruco
+# from cv2 import aruco
 from skimage import color
 
 
@@ -137,12 +137,13 @@ class IntrinsicCalibration:
                                                               (w, h), 1, (w, h))
             # Undistort
             dst = cv2.undistort(imgDistort, self.cameraMatrix, self.distortionCoeff, None)
+            print(j)
             # Save image in specified image pattern in destination folder - by default captured image/npy
             if imgPattern == "*.PNG" or imgPattern == "*.png":
-                imgSavePng = os.path.join(distImgFolder, '/capture_', str(img_num) + '.PNG')
+                imgSavePng = distImgFolder + '/capture_' + str(img_num) + '.PNG'
                 cv2.imwrite(imgSavePng, dst)
             elif imgPattern == "*.npy":
-                imgSaveNpy = os.path.join(distImgFolder, '/capture_', str(img_num) + '.npy')
+                imgSaveNpy = distImgFolder + '/capture_' + str(img_num) + '.npy'
                 np.save(imgSaveNpy, dst)
             else:
                 print("Specify image pattern: .PNG and .npy are supported")

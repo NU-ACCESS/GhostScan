@@ -13,14 +13,16 @@ PNGPattern = "*.png"
 ## Setup
 
 # Checker Pattern(horizontal square count -1, vertical square count -1) project on display
-CHECKERPATTERN_SIZE = (23, 7)
+# CHECKERPATTERN_SIZE = (23, 7)
+CHECKERPATTERN_SIZE = (13, 9)
 # Display dimensions
 SCREEN_WIDTH = 1920
 SCREEN_HEIGHT = 1080
 # Checker Pattern coordination in pixel unit
-CHECKER_FILE = "Projections/8_24_checker.npz"
+# CHECKER_FILE = "Projections/8_24_checker.npz"
+# CHECKER_FILE = "Projections/10_14_checker.npz"
 # Aruco marker on the mirror dimensions (m)
-ARUCO_MARKER_LENGTH = 0.04
+ARUCO_MARKER_LENGTH = 0.02
 #ARUCO_BOARD_HEIGHT = 0.2884
 #ARUCO_BOARD_WIDTH = 0.5932
 aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
@@ -161,12 +163,31 @@ def invTransformation(R, t):
 
     return Rinv, Tinv
 
+def by_num_ele(start,step,n_elements):
+    return np.arange(start,start+step*n_elements,step)
+
+
+def generateObjP(checkerH, checkerV, squareSize):
+    a = checkerH
+    b = checkerV
+    m = squareSize
+    displayLength = 1920
+    displayWidth = 1080
+
+    Xpts = by_num_ele(-(a-2)*m/2 + displayLength/2, m, (a-1))
+    Ypts = by_num_ele(-(b-2)*m/2 + displayWidth/2, m, (b-1))
+    X2D,Y2D = np.meshgrid(Xpts,Ypts)
+    objp2D = np.column_stack((X2D.ravel(),Y2D.ravel()))
+    objp3D = np.insert(objp2D, 2, 0, axis=1)
+    return objp3D
+
 def calib(imgPath, camMtx, dist, half_length, half_height, displayScaleFactor):
     ARUCO_BOARD_HEIGHT = half_height * 2 
     ARUCO_BOARD_WIDTH = half_length * 2 
     CHECKSQUARE_SIZE = displayScaleFactor
 
-    objP_pixel = np.ceil(readCheckerObjPoint(CHECKER_FILE))
+    # objP_pixel = np.ceil(readCheckerObjPoint(CHECKER_FILE))
+    objP_pixel = np.ceil(generateObjP(14, 10, 80))
     objP_pixel[:, 2] = 0
     objP = np.array(objP_pixel)
     for i in range(CHECKERPATTERN_SIZE[1]):
@@ -251,7 +272,7 @@ def calib(imgPath, camMtx, dist, half_length, half_height, displayScaleFactor):
         proj, jac = cv2.projectPoints(objP, rvecVirtual, tvecVirtual, camMtx, dist)
         img_rep = img
 
-        cv2.drawChessboardCorners(img_rep, CHECKERPATTERN_SIZE, proj, True)
+        # cv2.drawChessboardCorners(img_rep, CHECKERPATTERN_SIZE, proj, True)
         width = 960
         height = int(img_rep.shape[0] * 960 / img_rep.shape[1])
         smallimg = cv2.resize(img_rep, (width, height))

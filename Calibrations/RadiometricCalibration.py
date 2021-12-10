@@ -3,7 +3,9 @@ import os
 import cv2
 import glob
 import matplotlib.pyplot as plt
-
+import skimage
+from scipy import ndimage, misc
+from skimage.util import img_as_ubyte
 
 class RadiometricCalibration:
 
@@ -12,6 +14,8 @@ class RadiometricCalibration:
         self.path = path
         # Get image resolution:
         self.width, self.height = resolution
+        # print((self.width, self.height))
+        # (1920, 1200)
         # Amount of sample points per image - to speed up calculation
         self.sampling_points = sampling_points
         # Initialize g function with None for later same for log exposure values
@@ -39,6 +43,17 @@ class RadiometricCalibration:
             self.raw_samples = data['samples']
         else:
             print("Capture and calibrate camera first")
+        return self.g
+
+    def compute_gamma_colorchart(self, intensities):
+        # Intensities is an 1D-array of the capture intensity values of the gray tiles on the checker board
+        # Returns a gamma values that fits the captured intensities to a linear plot
+        no_intensities = intensities.shape[0]
+        intensities = (intensities-np.min(intensities))/(np.max(intensities)-np.min(intensities))
+        ground_truth = np.linspace(0, 1, no_intensities)
+        # Disregard zero values because their logarithm is not defined
+        self.gamma = np.sum(np.log(intensities[1:])*np.log(ground_truth[1:]))/np.sum(np.log(intensities[1:])**2)
+        return self.gamma
 
     def load_raw_data(self):
         # Loading raw data files
@@ -47,17 +62,30 @@ class RadiometricCalibration:
         Exposure = []
         self.raw_data = []
         files = []
+        # print(os.listdir(self.path))
         for file in os.listdir(self.path):
-            # Only use .raw files
-            if file.endswith(".raw") or file.endswith(".Raw") or file.endswith(".RAW"):
+            # Only use .raw files(Balser)
+            #if file.endswith(".raw") or file.endswith(".Raw") or file.endswith(".RAW"):
+            #    files.append(file)
+            if file.endswith(".png") or file.endswith(".Png") or file.endswith(".PNG"):
                 files.append(file)
+
         # Sort files depending on their exposure time from lowest to highest
         files.sort(key=lambda x: int(x[:-4]))
         # We used exposure time as filenames
         for filename in files:
-            image = np.fromfile(self.path + '/' + filename, dtype=np.uint8)
+            #image = np.fromfile(self.path + '/' + filename, dtype=np.uint8)
+            # image = cv2.imread(self.path + '/' + filename, cv2.IMREAD_UNCHANGED);
+            image = cv2.imread(self.path + '/' + filename, 0)
+            print(self.path + '/'+ filename)
+            image = np.uint8(image)
+            # print(image.shape)
+            # print((self.width, self.height))
+            #(1200, 1920, 3) -> (1200, 1920)
+            # print('image dtype ',image.dtype)
             # for .raw file, we need to know the picture shape in advance
             image.shape = self.width, self.height
+            # image.shape = self.height, self.width
             filename = os.path.splitext(filename)[0] + '\n'
             Exposure.append(int(filename))
             self.raw_data.append(image)
@@ -94,6 +122,7 @@ class RadiometricCalibration:
         title: A string. Title of the plot.
         """
         logexpTime = np.log(self.exposures*(10**-6))
+        fig = plt.figure()
         plt.title(title)
         plt.xlabel('Log exposure')
         plt.ylabel('Pixel intensity value')
@@ -105,6 +134,8 @@ class RadiometricCalibration:
         x = logx + LEx
         plt.plot(x, self.raw_samples, 'ro', alpha=0.5)
         plt.plot(self.g, np.linspace(0, 255, 256))
+        imgSave = 'CapturedImages/sequenceImages/undistortRadioCalib/radioCalibResults'
+        fig.savefig(imgSave + '/Camera response' + '.png')
         plt.show()
 
     def get_camera_response(self, smoothness):
