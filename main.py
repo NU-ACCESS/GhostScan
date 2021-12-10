@@ -7,18 +7,24 @@ from CalibrationsSessions import RadiometricCalibSession, RadiometricCalibDispla
 #from Reconstructions import DeflectometryReconstruction
 
 #from Visualization import Visualization
-
 nph = 4
 # Set-up your camera
 # cam = Raspberry.RaspberryCam()
 # cam = MachineVision.Basler()
 # cam = MachineVision.Flir(exposure=100)
+# exp = 6500000
+exp = 5000000
 cam = MachineVision.Flir()
-cam.setExposure(13000)
+cam.setExposure(exp)
 cam.setGain(0)
-# cam = Webcam.Internal()
 # cam.getImage(name = 'test')
-# cam.getImage(calibration = True, calibrationName = 'Intrinsic')
+# cam.captureSeqImages()
+# cam = Webcam.Internal()
+# cam.displayCalib()
+# cam.getImage(calibration = True, calibrationName = 'Geometric')
+# img = cam.getImage(name = 'test')
+# print(img.shape)
+# cam.getImage(calibration = True, calibrationName = 'Intrinsic', name = '1')
 # cam.displayCalib()
 # intr_calib = IntrinsicCalibration.IntrinsicCalibration()
 # intr_calib_session = IntrinsicCalibSession.IntrinsicCalibSession(cam, intr_calib)
@@ -49,23 +55,14 @@ vis.showReference()
 vis.showAllImages()
 vis.showNormals()
 
-'''
-'''
-intr_calib = IntrinsicCalibration.IntrinsicCalibration()
-# Set up the calibration session by passing on the camera and the calibration object
-intr_calib_session = IntrinsicCalibSession.IntrinsicCalibSession(cam, intr_calib)
-intr_calib_session.capture()
-intr_calib_session.calibrate()
-intr_calib.load_calibration_data()
-'''
 
 # RadiometricCalibration
 # Set up the calibration object
 radio_calib = RadiometricCalibration.RadiometricCalibration(cam.getResolution())
-# Set up the calibration session by passing on the camera and the calibration object
-# To set your own exposures please pass them to the RadiometricCalibSession when creating
+# # Set up the calibration session by passing on the camera and the calibration object
+# # To set your own exposures please pass them to the RadiometricCalibSession when creating
 # radio_calib_session = RadiometricCalibSession.RadiometricCalibSession(cam, radio_calib)
-# Capture images at different exposures
+# # # Capture images at different exposures
 # radio_calib_session.capture()
 
 
@@ -74,7 +71,8 @@ radio_calib = RadiometricCalibration.RadiometricCalibration(cam.getResolution())
 # radio_calib.load_calibration_data()
 # radio_calib.plotCurve('Grayscale')
 
-radio_calib_display = RadiometricCalibDisplaySession.RadiometricCalibDisplaySession(cam, radio_calib)
+
+radio_calib_display = RadiometricCalibDisplaySession.RadiometricCalibDisplaySession(cam, radio_calib, exposure=exp)
 # radio_calib_display.captureImages()
 # radio_calib_display.avgImagePixel()
 # radio_calib_display.calculateDisplayCalibration()
