@@ -47,9 +47,10 @@ class Screen(Projection, ABC):
         cv2.namedWindow('Checkerboard', cv2.WINDOW_NORMAL)
         cv2.setWindowProperty('Checkerboard', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.imshow('Checkerboard', img)
-        time.sleep(2)
-        self.camera.getImage(name=save_img, calibration=True)
+
+        #time.sleep(5)
         cv2.waitKey(0)  # any key
+        self.camera.getImage(name=save_img, calibration=True)
         cv2.destroyWindow('Checkerboard')
 
     def displayPatterns(self, camera):
@@ -77,7 +78,7 @@ class Screen(Projection, ABC):
         # Set image
         self.canvas.create_image(0, 0, anchor='nw', image=image)
         self.root.update()
-        time.sleep(2)
+        time.sleep(1)
         if self.camera is None:
             print("No camera initialized.")
         else:
